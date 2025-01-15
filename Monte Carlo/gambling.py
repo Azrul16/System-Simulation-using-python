@@ -48,7 +48,7 @@ def gambling_game_simulation(num_trials):
     print(f"Total Wins: {total_wins}")
     print(f"Total Losses: {total_losses}")
     net_earnings = total_wins - total_losses
-    print(f"Net Earnings: Rs. {net_earnings}")
+    print(f"Net Earnings: BDT. {net_earnings}")
     print("-" * 40)
 
 # Parameters

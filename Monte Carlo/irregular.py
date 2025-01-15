@@ -1,59 +1,130 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import pygame
+import random
 
-def is_inside_figure(x, y):
-    """
-    Define the irregular figure here. For demonstration, let's create a simple
-    irregular shape (e.g., a quarter circle)
-    """
-    return (x**2 + y**2) <= 1 and x >= 0 and y >= 0
+# Initialize pygame
+pygame.init()
 
-def calculate_area(num_points=1000, square_size=9):
-    # Generate random points
-    x = np.random.uniform(0, square_size, num_points)
-    y = np.random.uniform(0, square_size, num_points)
-    
-    # Count points inside the figure
-    points_inside = sum(1 for i in range(num_points) 
-                       if is_inside_figure(x[i]/square_size, y[i]/square_size))
-    
+# Screen dimensions
+WIDTH, HEIGHT = 800, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Draw an Irregular Figure and Calculate Area")
+
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+
+# Variables
+drawing = False
+points = []
+calculation_done = False
+estimated_area = 0
+iterations = 0
+
+# Function to check if a point is inside the drawn figure
+def is_inside_polygon(point, polygon):
+    x, y = point
+    n = len(polygon)
+    inside = False
+
+    px, py = polygon[0]
+    for i in range(1, n + 1):
+        sx, sy = polygon[i % n]
+        if y > min(py, sy):
+            if y <= max(py, sy):
+                if x <= max(px, sx):
+                    if py != sy:
+                        xinters = (y - py) * (sx - px) / (sy - py) + px
+                    if px == sx or x <= xinters:
+                        inside = not inside
+        px, py = sx, sy
+
+    return inside
+
+# Function to calculate area using Monte Carlo method
+def calculate_area(polygon, bounding_box, num_points=10000):
+    global estimated_area, iterations
+    x_min, y_min, x_max, y_max = bounding_box
+    total_points = 0
+    inside_points = 0
+
+    for _ in range(num_points):
+        x = random.uniform(x_min, x_max)
+        y = random.uniform(y_min, y_max)
+        total_points += 1
+
+        # Check if the point is inside the polygon
+        if is_inside_polygon((x, y), polygon):
+            # Draw green dot if inside the polygon
+            pygame.draw.circle(screen, GREEN, (int(x), int(y)), 1)
+            inside_points += 1
+        else:
+            # Draw red dot if outside the polygon
+            pygame.draw.circle(screen, RED, (int(x), int(y)), 1)
+
+        # Show the number of iterations
+        iterations = total_points
+        pygame.display.flip()
+
     # Calculate area
-    total_square_area = square_size * square_size
-    ratio = points_inside / num_points
-    estimated_area = ratio * total_square_area
-    
-    return estimated_area, x, y, points_inside
+    bounding_area = (x_max - x_min) * (y_max - y_min)
+    estimated_area = (inside_points / total_points) * bounding_area
+    return estimated_area
 
-def plot_results(x, y, square_size, points_inside, num_points):
-    plt.figure(figsize=(10, 10))
-    
-    # Plot points, coloring them based on whether they're inside or outside
-    inside_figure = [is_inside_figure(x[i]/square_size, y[i]/square_size) 
-                    for i in range(len(x))]
-    
-    plt.scatter(x[~np.array(inside_figure)], y[~np.array(inside_figure)], 
-                c='red', alpha=0.6, label='Outside')
-    plt.scatter(x[np.array(inside_figure)], y[np.array(inside_figure)], 
-                c='blue', alpha=0.6, label='Inside')
-    
-    plt.grid(True)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title(f'Monte Carlo Area Estimation\n'
-              f'Points inside: {points_inside}, Total points: {num_points}\n'
-              f'Ratio: {points_inside/num_points:.4f}')
-    plt.legend()
-    plt.show()
+# Main loop
+running = True
+while running:
+    screen.fill(WHITE)
 
-# Run simulation with different numbers of points
-num_points_list = [50, 1000, 10000]
-square_size = 9
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-for num_points in num_points_list:
-    estimated_area, x, y, points_inside = calculate_area(num_points, square_size)
-    print(f"\nNumber of points: {num_points}")
-    print(f"Estimated area: {estimated_area:.2f} square units")
-    print(f"Ratio of points inside: {points_inside/num_points:.4f}")
-    
-    # Plot the results
-    plot_results(x, y, square_size, points_inside, num_points)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left mouse button
+                drawing = True
+                points = []
+                calculation_done = False  # Reset calculation on new drawing
+
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:  # Left mouse button
+                drawing = False
+                # Stop drawing and calculate the area
+                if len(points) > 2:  # Only calculate if polygon has more than 2 points
+                    points.append(points[0])  # Close the polygon
+
+                    # Determine bounding box
+                    x_coords = [p[0] for p in points]
+                    y_coords = [p[1] for p in points]
+                    bounding_box = (min(x_coords), min(y_coords), max(x_coords), max(y_coords))
+
+                    # Calculate the area
+                    estimated_area = calculate_area(points, bounding_box)
+                    calculation_done = True
+
+        elif event.type == pygame.MOUSEMOTION:
+            if drawing:
+                points.append(event.pos)
+
+    # Drawing the figure while drawing
+    if drawing and len(points) > 1:
+        pygame.draw.lines(screen, BLACK, False, points, 2)
+
+    # If drawing is complete and calculation is done, draw the polygon and the estimated area
+    if calculation_done:
+        pygame.draw.polygon(screen, BLACK, points, 2)
+        area_text = f"Estimated Area: {estimated_area:.2f} square pixels"
+        font = pygame.font.SysFont(None, 30)
+        area_label = font.render(area_text, True, BLACK)
+        screen.blit(area_label, (10, 10))  # Display area on screen
+
+        # Display the number of iterations on the screen
+        iteration_text = f"Iterations: {iterations}"
+        iteration_label = font.render(iteration_text, True, BLACK)
+        screen.blit(iteration_label, (10, 40))  # Display iterations below area
+
+    pygame.display.flip()
+
+# Quit pygame
+pygame.quit()
