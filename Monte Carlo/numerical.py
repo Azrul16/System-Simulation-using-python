@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def f(x):
-    """Function to integrate: f(x) = x^3"""
     return x**3
 
 def monte_carlo_integration(num_points=1000):
@@ -70,5 +69,4 @@ for num_points in num_points_list:
     print(f"Absolute error: {error:.2f}")
     print(f"Relative error: {(error/exact_value)*100:.2f}%")
     
-    # Plot the results
     plot_results(x, y, points_under_curve, num_points)
