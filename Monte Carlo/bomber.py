@@ -33,5 +33,5 @@ print(tabulate(results, headers=headers, tablefmt="grid"))
 # Compute and print hit percentage
 hits = sum(1 for r in results if r[-1] == "Hit")
 hit_percentage = (hits / num_bombs) * 100
-print(f"\nTotal Hits: {hits} out of {num_bombs}")
+print(f"\nTotal Hits {hits}\nTotal miss {num_bombs-hits} \nOut of {num_bombs}")
 print(f"Hit Percentage: {hit_percentage:.2f}%")
